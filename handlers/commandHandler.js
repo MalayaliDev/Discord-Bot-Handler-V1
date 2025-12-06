@@ -29,46 +29,61 @@ export class CommandHandler {
   async loadCommands() {
     const startTime = performance.now();
     
-    const commandsPath = join(__dirname, '../commands');
     let slashCount = 0;
     let prefixCount = 0;
 
     // Parallel loading with Promise.all for faster startup
     const loadPromises = [];
 
-    // Load slash commands
-    const slashPath = join(commandsPath, 'slash');
-    if (this._pathExists(slashPath)) {
-      const slashFolders = readdirSync(slashPath);
-      for (const folder of slashFolders) {
-        const folderPath = join(slashPath, folder);
-        const commandFiles = readdirSync(folderPath).filter(file => file.endsWith('.js'));
+    // Load slash commands from slash_command folder
+    const slashCommandPath = join(__dirname, '../slash_command');
+    if (this._pathExists(slashCommandPath)) {
+      try {
+        const slashFolders = readdirSync(slashCommandPath);
+        for (const folder of slashFolders) {
+          const folderPath = join(slashCommandPath, folder);
+          try {
+            const commandFiles = readdirSync(folderPath).filter(file => file.endsWith('.js'));
 
-        for (const file of commandFiles) {
-          loadPromises.push(
-            this._loadCommand(join(folderPath, file), 'slash').then(loaded => {
-              if (loaded) slashCount++;
-            })
-          );
+            for (const file of commandFiles) {
+              loadPromises.push(
+                this._loadCommand(join(folderPath, file), 'slash').then(loaded => {
+                  if (loaded) slashCount++;
+                })
+              );
+            }
+          } catch (error) {
+            logger.warn(`Failed to read slash command folder ${folder}: ${error.message}`);
+          }
         }
+      } catch (error) {
+        logger.warn(`Failed to read slash_command directory: ${error.message}`);
       }
     }
 
-    // Load prefix commands
-    const prefixPath = join(commandsPath, 'prefix');
-    if (this._pathExists(prefixPath)) {
-      const prefixFolders = readdirSync(prefixPath);
-      for (const folder of prefixFolders) {
-        const folderPath = join(prefixPath, folder);
-        const commandFiles = readdirSync(folderPath).filter(file => file.endsWith('.js'));
+    // Load prefix commands from commands folder
+    const commandsPath = join(__dirname, '../commands');
+    if (this._pathExists(commandsPath)) {
+      try {
+        const prefixFolders = readdirSync(commandsPath);
+        for (const folder of prefixFolders) {
+          const folderPath = join(commandsPath, folder);
+          try {
+            const commandFiles = readdirSync(folderPath).filter(file => file.endsWith('.js'));
 
-        for (const file of commandFiles) {
-          loadPromises.push(
-            this._loadCommand(join(folderPath, file), 'prefix').then(loaded => {
-              if (loaded) prefixCount++;
-            })
-          );
+            for (const file of commandFiles) {
+              loadPromises.push(
+                this._loadCommand(join(folderPath, file), 'prefix').then(loaded => {
+                  if (loaded) prefixCount++;
+                })
+              );
+            }
+          } catch (error) {
+            logger.warn(`Failed to read prefix command folder ${folder}: ${error.message}`);
+          }
         }
+      } catch (error) {
+        logger.warn(`Failed to read commands directory: ${error.message}`);
       }
     }
 
@@ -94,6 +109,10 @@ export class CommandHandler {
       // Check cache first
       if (commandCache.has(cacheKey)) {
         const commandModule = commandCache.get(cacheKey);
+        if (!commandModule.data || !commandModule.data.name) {
+          logger.warn(`Cached command at ${filePath} has invalid data structure`);
+          return false;
+        }
         if (type === 'slash') {
           this.slashCommands.set(commandModule.data.name, commandModule);
         } else if (type === 'prefix') {
@@ -105,7 +124,24 @@ export class CommandHandler {
       const command = await import(`file://${filePath}?t=${Date.now()}`);
       const commandModule = command.default;
 
-      if (!commandModule.data || !commandModule.execute) {
+      // Validate command structure
+      if (!commandModule) {
+        logger.warn(`Command at ${filePath} has no default export`);
+        return false;
+      }
+
+      if (!commandModule.data) {
+        logger.warn(`Command at ${filePath} is missing 'data' property`);
+        return false;
+      }
+
+      if (!commandModule.data.name) {
+        logger.warn(`Command at ${filePath} data is missing 'name' property`);
+        return false;
+      }
+
+      if (!commandModule.execute || typeof commandModule.execute !== 'function') {
+        logger.warn(`Command '${commandModule.data.name}' at ${filePath} is missing 'execute' function`);
         return false;
       }
 
@@ -119,7 +155,7 @@ export class CommandHandler {
       }
       return true;
     } catch (error) {
-      logger.error(`Failed to load command: ${error.message}`);
+      logger.error(`Failed to load command from ${filePath}: ${error.message}`);
       return false;
     }
   }
