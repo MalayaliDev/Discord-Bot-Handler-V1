@@ -1,0 +1,25 @@
+{
+  "name": "discord-bot-handler",
+  "version": "1.0.0",
+  "description": "A fast and efficient Discord bot handler with support for slash and prefix commands",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "handler",
+    "slash-commands",
+    "prefix-commands"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.14.0",
+    "dotenv": "^16.3.1",
+    "chalk": "^5.3.0"
+  }
+}
