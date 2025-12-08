@@ -1,18 +1,18 @@
-# ✨ Discord Bot Handler: Fast & Modular (V1)
+# 🤖 MDH - Discord Bot Handler (V1)
 
-**A high-performance, flexible, and feature-rich Discord bot framework built on `discord.js` (v14+). This handler provides native, efficient support for both modern Slash Commands and classic Prefix Commands, complete with built-in cooldowns, statistics, and a robust logging utility.**
+**A fast, lightweight, and feature-rich Discord bot handler with beautiful console UI. Built on `discord.js` (v14+), this framework provides seamless support for both modern Slash Commands and classic Prefix Commands, with built-in cooldowns, statistics tracking, and elegant logging.**
 
 ---
 
-## 🚀 Key Features
+## ✨ Key Features
 
-  * **⚡ Dual Command System:** Full support for both **Slash Commands** (`/`) and **Prefix Commands** (`!`).
-  * **🧩 Modular Architecture:** Clear separation of logic into `CommandHandler` and `EventHandler` for maximum maintainability and organization.
-  * **⏱️ Optimized Startup:** Events and commands are loaded **in parallel** using `Promise.all` for minimal startup latency.
-  * **🔒 Cooldown Management:** Built-in, per-user cooldowns for both command types, preventing spam and misuse.
-  * **📊 Runtime Statistics:** The `CommandHandler` tracks command usage, total executions, and top users in real-time, with a **5-second cache** for performance.
-  * **🎨 Advanced Logging:** A custom `logger.js` utility using `chalk` provides clean, color-coded, and informative console output.
-  * **♻️ Hot-Reload Ready:** Utilizes a custom cache system for commands and events to optimize future development cycles.
+- **⚡ Dual Command System** — Full support for **Slash Commands** (`/`) and **Prefix Commands** (`!`)
+- **🧩 Modular Architecture** — Clean separation of `CommandHandler` and `EventHandler` for easy maintenance
+- **⏱️ Parallel Loading** — Commands and events load simultaneously using `Promise.all` for lightning-fast startup
+- **🔒 Cooldown System** — Built-in per-user cooldowns prevent spam and abuse
+- **📊 Live Statistics** — Track command usage, executions, and top users with 5-second caching
+- **🎨 Beautiful Console** — Custom logger with color-coded output for better visibility
+- **🚀 Production Ready** — Error handling, validation, and performance optimizations included
 
 ---
 
@@ -65,70 +65,79 @@ Use the defined scripts in `package.json` to start your bot.
 
 ---
 
-## 📂 Project Structure & Command Setup
+## 📂 Project Structure
 
-The handler is designed to automatically detect and load files based on their location.
+The handler automatically detects and loads commands based on their location.
 
 ```
-.
-├── commands/
-│   ├── prefix/               # Traditional commands (e.g., !ping)
-│   │   └── fun/              # Command category
-│   │       └── ping.js       
-│   └── slash/                # Application commands (e.g., /ping)
-│       └── utility/          # Command category
-│           └── info.js       
-├── events/                   # Discord events (ready, messageCreate, etc.)
-├── handlers/                 # Core logic (CommandHandler, EventHandler)
-├── utils/                    # Helper functions (logger.js)
-├── index.js                  # Main entry file
-└── package.json
+Bot Handler/
+├── commands/                 # Prefix commands (e.g., !ping)
+│   └── utility/              # Command category
+│       ├── ping.js
+│       └── hello.js
+├── slash_command/            # Slash commands (e.g., /ping)
+│   └── utility/              # Command category
+│       ├── ping.js
+│       └── stats.js
+├── events/                   # Discord event handlers
+│   ├── ready.js
+│   ├── interactionCreate.js
+│   └── messageCreate.js
+├── handlers/                 # Core handlers
+│   ├── commandHandler.js
+│   └── eventHandler.js
+├── utils/
+│   └── logger.js             # Beautiful console logging
+├── index.js                  # Main bot file
+├── package.json
+└── .env                      # Configuration (create from .env.example)
 ```
 
-### Command File Formatting (The `data` and `execute` standard)
+## 📝 Creating Commands
 
-#### 1\. Slash Commands (`commands/slash/...`)
+### Slash Commands (`slash_command/category/...`)
 
-Slash commands **MUST** use the `data` property for registration with the Discord API.
+Slash commands use Discord's `SlashCommandBuilder` for registration.
 
 ```javascript
-// Example: commands/slash/utility/info.js
+// Example: slash_command/utility/hello.js
 import { SlashCommandBuilder } from 'discord.js';
 
 export default {
-  data: new SlashCommandBuilder()
-    .setName('info')
-    .setDescription('Provides information about the bot and server.'),
-  
-  cooldown: 5, // Optional: Per-command cooldown in seconds
-  
-  async execute(interaction) {
-    await interaction.reply({ content: 'Bot info here!', ephemeral: true });
-  },
+  type: 'slash',
+  cooldown: 3,
+  data: new SlashCommandBuilder()
+    .setName('hello')
+    .setDescription('Says hello!'),
+  
+  async execute(interaction) {
+    await interaction.reply(`Hello ${interaction.user.username}!`);
+  }
 };
 ```
 
-#### 2\. Prefix Commands (`commands/prefix/...`)
+### Prefix Commands (`commands/category/...`)
 
-Prefix commands use a simple JSON object for the `data` property, defining the command name and optional aliases.
+Prefix commands use a simple object structure for the command name.
 
 ```javascript
-// Example: commands/prefix/fun/hello.js
+// Example: commands/utility/hello.js
 export default {
-  data: {
-    name: 'hello',
-    aliases: ['hi', 'hey'], // Optional: command aliases
-    description: 'Says hello back.',
-  },
-
-  cooldown: 3, // Optional: Per-command cooldown in seconds
-
-  async execute(message, args) {
-    // args is an array of strings following the command name
-    await message.reply(`Hello, ${message.author.username}! You sent: ${args.join(' ')}`);
-  },
+  type: 'prefix',
+  cooldown: 3,
+  data: { name: 'hello' },
+  
+  async execute(message, args) {
+    await message.reply(`Hello ${message.author.username}!`);
+  }
 };
 ```
+
+**Command Properties:**
+- `type` — Command type (`'slash'` or `'prefix'`)
+- `data` — Command metadata (required)
+- `cooldown` — Cooldown in seconds (default: 3)
+- `execute()` — Command logic function (required)
 
 ### Cooldowns (How it Works)
 
